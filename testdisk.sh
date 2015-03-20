@@ -9,22 +9,29 @@ devices_mapping='devices_mapping'
 test -e $devices_mapping && echo "rm old" $devices_mapping && rm $devices_mapping
 
 host_num=0
-host_num_all=2
-while [ $host_num -lt $host_num_all ]
+#总共几个控制器
+total_host_num=`ls /sys/class/scsi_host  | wc -w`
+#每个控制器有几个接口
+host_ports=5
+
+while [ $host_num -lt $total_host_num ]
 do
-	for basedir in "/sys/devices/platform/sata_mv.0/host$host_num"
+	for basedir in "/sys/class/scsi_host/host$host_num"
 	do
-		for target in $( ls $basedir | grep target)                             
+		for targetHBT in $( ls "$basedir/device/" | grep "target")                             
 		do   
-			echo $target
-	        interfaceno=$(echo $target | cut -d ':' -f 2)                   
-			echo $interfaceno
-	        for basename in $(ls $basedir/$target/$host_num:$interfaceno:0:0/block/)
+			echo $targetHBT
+	        HBT=$(echo $targetHBT | cut -c 7-)                   
+			echo "HBT is" $HBT
+            T=$(echo $HBT | cut -c 5)
+            B=$(echo $HBT | cut -c 3)
+            echo $T
+	        for device in $(ls $basedir/device/$targetHBT/$HBT:0/block/)
 	        do                         
-	        	if [ -n $basename ]
+	        	if [ -n $device ]
 	            then          
-						interfaceno=$((interfaceno+host_num*5))
-						echo $basename $interfaceno  >> $devices_mapping
+						B=$((B+host_num*host_ports))
+						echo $device $B  >> $devices_mapping
 	            fi   
 	            break
 	        done
